@@ -1,18 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from pydantic import AwareDatetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
 from app.database import get_db
 from app.models import Task, User
-from app.models.enums import TaskStatus
-from app.schemas.task import TaskCreate, TaskPage, TaskRead, TaskUpdate, TaskStatusUpdate
+from app.models.enums import SortOrder, TaskPriority, TaskSortField, TaskStatus
+from app.schemas.task import TaskCreate, TaskPage, TaskRead, TaskStatusUpdate, TaskUpdate
 from app.services.task_service import (
     ensure_can_assign,
     ensure_editable,
     get_task_or_404,
+    search_tasks,
     ensure_can_transtion
 )
+
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -35,14 +37,36 @@ async def create_task(
 
 @router.get("", response_model=TaskPage)
 async def list_tasks(
+    search: str | None = Query(None, min_length=1, max_length=100),
+    task_status: TaskStatus | None = Query(None, alias="status"),
+    priority: TaskPriority | None = None,
+    assignee_id: int | None = None,
+    deadline_from: AwareDatetime | None = None,
+    deadline_to: AwareDatetime | None = None,
+    sort_by: TaskSortField | None = None,
+    order: SortOrder = SortOrder.ASC,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
-    total = await db.scalar(select(func.count()).select_from(Task))
-    result = await db.scalars(select(Task).order_by(Task.id).limit(limit).offset(offset))
-    return {"items": result.all(), "total": total, "limit": limit, "offset": offset}
+    if deadline_from and deadline_to and deadline_from > deadline_to:
+        raise HTTPException(422, "deadline_from must not be later than deadline_to")
+
+    items, total = await search_tasks(
+        db,
+        search=search,
+        task_status=task_status,
+        priority=priority,
+        assignee_id=assignee_id,
+        deadline_from=deadline_from,
+        deadline_to=deadline_to,
+        sort_by=sort_by,
+        order=order,
+        limit=limit,
+        offset=offset,
+    )
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/{task_id}", response_model=TaskRead)
