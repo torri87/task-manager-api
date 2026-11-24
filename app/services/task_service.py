@@ -1,6 +1,6 @@
 from datetime import datetime, UTC
 from fastapi import HTTPException, status
-from sqlalchemy import and_, case, func, or_, select
+from sqlalchemy import and_, case, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import (
@@ -183,3 +183,10 @@ async def get_stats(db: AsyncSession):
         "overdue": overdue,
         "active": active,
     }
+
+
+async def cancel_overdue_tasks(db: AsyncSession):
+    result = await db.execute(update(Task).where(overdue_condition()).values(status=TaskStatus.CANCELLED))
+    await db.commit()
+
+    return result.rowcount
