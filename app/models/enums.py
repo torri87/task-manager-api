@@ -13,3 +13,7 @@ class TaskPriority(enum.StrEnum):
     LOW = 'Low'
     MEDIUM = 'Medium'
     HIGH = 'High'
+
+
+ACTIVE_STATUSES = (TaskStatus.BACKLOG, TaskStatus.IN_PROGRESS, TaskStatus.REVIEW)
+FINAL_STATUSES = (TaskStatus.DONE, TaskStatus.CANCELLED)
