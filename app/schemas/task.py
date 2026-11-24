@@ -69,3 +69,11 @@ class TaskPage(BaseModel):
 
 class TaskStatusUpdate(BaseModel):
     status: TaskStatus
+
+
+class TaskStats(BaseModel):
+    total: int
+    by_status: dict[TaskStatus, int]
+    by_priority: dict[TaskPriority, int]
+    overdue: int
+    active: int
