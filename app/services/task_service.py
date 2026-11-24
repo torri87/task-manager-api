@@ -1,6 +1,5 @@
 from datetime import datetime, UTC
 from fastapi import HTTPException, status
-from pydantic.v1 import NoneIsNotAllowedError
 from sqlalchemy import func, select, case, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +12,6 @@ from app.models.enums import (
     TaskStatus,
 )
 from app.models import Task, User
-from app.models.enums import ACTIVE_STATUSES, FINAL_STATUSES, TaskStatus
 
 MAX_ACTIVE_TASKS = 10
 
@@ -75,8 +73,8 @@ def ensure_can_transtion(task: Task, new_status: TaskStatus):
 
 
 priority_rank = case(
-    (Task.priority == Task.priority.HIGH, 3),
-    (Task.priority == Task.priority.MEDIUM, 2),
+    (Task.priority == TaskPriority.HIGH, 3),
+    (Task.priority == TaskPriority.MEDIUM, 2),
     else_=1,
 )
 
