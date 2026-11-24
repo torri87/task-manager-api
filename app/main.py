@@ -3,7 +3,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.routers import auth
 app = FastAPI(title='Task Manager API')
+app.include_router(auth.router)
 @app.get('/')
 async def health_check():
     return {'status': 'ok'}

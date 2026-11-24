@@ -14,12 +14,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/auth/login')
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
     credentials_error = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate credentials', headers={'WWW-Authenticate': 'Bearer'})
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithm=[settings.algorithm])
-        user_id = int(payload['sub'])
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        user_id = int(payload["sub"])
     except (jwt.InvalidTokenError, KeyError, ValueError):
         raise credentials_error
 
     user = await db.get(User, user_id)
-    if User is None:
+    if user is None:
         raise credentials_error
     return user
