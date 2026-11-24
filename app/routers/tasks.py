@@ -6,11 +6,12 @@ from app.core.deps import get_current_user
 from app.database import get_db
 from app.models import Task, User
 from app.models.enums import TaskStatus
-from app.schemas.task import TaskCreate, TaskPage, TaskRead, TaskUpdate
+from app.schemas.task import TaskCreate, TaskPage, TaskRead, TaskUpdate, TaskStatusUpdate
 from app.services.task_service import (
     ensure_can_assign,
     ensure_editable,
     get_task_or_404,
+    ensure_can_transtion
 )
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -97,3 +98,12 @@ async def delete_task(
         )
     await db.delete(task)
     await db.commit()
+
+@router.patch("/{task_id}/status", response_model=TaskRead)
+async def change_status(task_id: int, data: TaskStatusUpdate, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_user)):
+    task = await get_task_or_404(db, task_id)
+    ensure_can_transtion(task, data.status)
+    task.status = data.status
+    await db.commit()
+    await db.refresh(task)
+    return task

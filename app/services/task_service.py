@@ -1,9 +1,10 @@
+from datetime import datetime, UTC
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Task, User
-from app.models.enums import ACTIVE_STATUSES, FINAL_STATUSES
+from app.models.enums import ACTIVE_STATUSES, FINAL_STATUSES, TaskStatus
 
 MAX_ACTIVE_TASKS = 10
 
@@ -37,3 +38,28 @@ async def ensure_can_assign(db: AsyncSession, user_id: int):
             status.HTTP_409_CONFLICT,
             f"User already has {MAX_ACTIVE_TASKS} active tasks",
         )
+
+
+ALLOWED_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
+    TaskStatus.BACKLOG: {TaskStatus.IN_PROGRESS, TaskStatus.CANCELLED},
+    TaskStatus.IN_PROGRESS: {TaskStatus.REVIEW, TaskStatus.CANCELLED},
+    TaskStatus.REVIEW: {TaskStatus.DONE, TaskStatus.CANCELLED},
+    TaskStatus.DONE: set(),
+    TaskStatus.CANCELLED: set(),
+}
+
+
+def ensure_can_transtion(task: Task, new_status: TaskStatus):
+    allowed = ALLOWED_TRANSITIONS[task.status]
+    if new_status not in allowed:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Cannot move task from '{task.status.value}' to '{new_status.value}'."
+        )
+
+    if new_status == TaskStatus.DONE:
+        if task.assignee_id is None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Assignee not found")
+
+        if task.deadline < datetime.now(UTC):
+            raise HTTPException(status.HTTP_409_CONFLICT, "Cannot complete a task after its deadline")

@@ -65,3 +65,7 @@ class TaskPage(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class TaskStatusUpdate(BaseModel):
+    status: TaskStatus
